@@ -1,5 +1,5 @@
 # Northcliff Home Manager Display
-This project uses a Raspberry Pi and a SenseHat to monitor and display the states of key sensors that are being managed by the ![Northcliff Home Manager](https://github.com/roscoe81/Home-Manager). It provides an "at a glance" view of the key property sensor states.
+This project uses a Raspberry Pi and a SenseHat to monitor and display the states of key sensors that are being managed by the [Northcliff Home Manager](https://github.com/roscoe81/Home-Manager). It provides an "at a glance" view of the key property sensor states.
 
 The SenseHat mimics the managed property's layout to display the following sensor states:
 ### Indoor and Outdoor Motion Sensors
