@@ -10,8 +10,8 @@ The SenseHat mimics the managed property's layout to display the following senso
   The relevant pixel changes from red to green to blue as the humidity increases.
 ### Indoor Air Quality Levels
   The relevant pixel changes from green to red as the air quality deteriorates.
-### Airconditioner Heating/Cooling/Fan States
-  The relevant pixel is orange for heat, cyan for cool and white for fan.
+### Airconditioner Heating/Cooling/Fan States and Filter Status
+  The relevant aircon state pixel is orange for heat, cyan for cool and white for fan mode. A second pixel is set to red if the aircon filter requires cleaning.
 ### Door Sensors
 The relevant pixel is green for door closed and yellow for door opened.
 
