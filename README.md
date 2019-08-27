@@ -32,7 +32,7 @@ This project also uses SenseHat's air pressure monitor to record air pressure pr
 
 I have used systemd to execute the code on boot and automatically restart on errors, as well as using the Raspberry Pi watchdog timer. These improve system reliability.
 
-![Northcliff Home Manager Display](https://github.com/roscoe81/Garage-Door-Opener/blob/master/Schematics%20and%20Photos/IMG_3128.png)
+![Northcliff Home Manager Display](https://github.com/roscoe81/Home-Manager-Display/blob/master/IMG_6003.jpg)
 
 ## License
 
