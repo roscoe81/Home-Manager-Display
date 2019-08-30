@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Northcliff Home Manager Display - Version 3.1 - Gen
+# Northcliff Home Manager Display - Version 3.4 - Gen
 import time
 import paho.mqtt.client as mqtt
 import json
@@ -22,6 +22,7 @@ class NorthcliffDisplay(object): # The class for the main display code
         self.hum_map=(7,5)
         self.aqi_map=(4,3)
         self.barometer_map=(0,3)
+        self.barometer_calibration_offset=-3
         self.barometer_change_map=(0,4)
         self.barometer_history = [0.00 for x in range (10)]
         self.weather_forecast=[[0,0],[0,0],[0,0]]
@@ -138,15 +139,15 @@ class NorthcliffDisplay(object): # The class for the main display code
 
     def process_barometer(self):
         barometer_log_time = time.time()
-        barometer=round(sense.get_pressure(),2)
+        barometer=round(sense.get_pressure(),2)+self.barometer_calibration_offset
         valid_barometer_history, barometer_change = self.log_barometer(barometer)
         #self.print_update('Barometer Reading of '+str(barometer)+' millibars on ')
         if barometer>1023:
             hue=0
-        elif barometer<1009:
+        elif barometer<1003:
             hue=240
         else:
-            hue=int((1023-barometer)*17)
+            hue=int((1023-barometer)*12)
         self.load_display_buffer(self.barometer_map[0], self.barometer_map[1], [hue,100,100])
         if valid_barometer_history == True:
             self.process_barometer_change(barometer_change, barometer)
@@ -197,7 +198,7 @@ class NorthcliffDisplay(object): # The class for the main display code
                 forecast = 'Storm'
             else:
                 forecast = 'Storm and Gale'
-        elif barometer>=1009 or barometer <=1018:
+        elif barometer>=1009 and barometer <=1018:
             if barometer_change>-4 and barometer_change<1.1:
                 forecast = 'No Change'
             elif barometer_change>=1.1 and barometer_change<=6 and barometer<=1015:
@@ -210,7 +211,7 @@ class NorthcliffDisplay(object): # The class for the main display code
                 forecast = 'Gale Warning'       
             else:
                 forecast = 'Rain and Wind'
-        elif barometer>1018 or barometer <=1023:
+        elif barometer>1018 and barometer <=1023:
             if barometer_change>0 and barometer_change<1.1:
                 forecast = 'No Change'
             elif barometer_change>=1.1 and barometer_change<6:
