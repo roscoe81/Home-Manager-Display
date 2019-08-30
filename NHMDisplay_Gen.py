@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Northcliff Home Manager Display - Version 3.4 - Gen
+# Northcliff Home Manager Display - Version 3.6 - Gen
 import time
 import paho.mqtt.client as mqtt
 import json
@@ -31,8 +31,8 @@ class NorthcliffDisplay(object): # The class for the main display code
         self.temp_forecast_map=(0,2)
         self.forecast_barometer_map={'No Change':[[120,0],[120,0],[120,0]], 'Clearing and Colder':[[120,100],[120,100],[180,100]], 'Rain and Wind':[[60,100],[240,100],[120,0]], 'Storm':[[30,100],[240,100],[180,100]],
                                       'Storm and Gale':[[0,100],[240,100],[180,100]], 'Strong Wind Warning':[[30,100],[120,0],[120,0]], 'Gale Warning': [[0,100],[120,0],[120,0]], 'Poorer Weather': [[60,100],[180,100],[180,100]],
-                                      'Fair with Slight Temp Change': [[120,100],[120,100],[150,100]], 'No Change and Rain in 24 Hours': [[120,0],[180,100],[120,0]], 'Rain, Wind and Higher Temp': [[80,100],[180,100],[60,100]],
-                                      'Fair Weather':[[120,100],[120,100],[120,100]], 'Fair Weather and Slowly Rising Temp': [[120,100],[120,100],[60,100]], 'Warming Trend': [[120,0],[120,0],[30,100]]}
+                                      'Fair Weather with Slight Temp Change': [[120,100],[120,100],[150,100]], 'No Change and Rain in 24 Hours': [[120,0],[180,100],[120,0]], 'Rain, Wind and Higher Temp': [[80,100],[180,100],[60,100]],
+                                      'Fair Weather':[[120,100],[120,100],[120,100]], 'Fair Weather Weather with No Marked Temp Change': [[120,100],[120,100],[120,0]], 'Fair Weather and Slowly Rising Temp': [[120,100],[120,100],[60,100]], 'Warming Trend': [[120,0],[120,0],[30,100]]}
         self.low_light=False
      
     def on_connect(self, client, userdata, flags, rc):
@@ -154,16 +154,15 @@ class NorthcliffDisplay(object): # The class for the main display code
         return barometer_log_time
             
     def log_barometer(self, barometer): # Logs 3 hours of barometer readings, taken every 18 minutes
+        three_hour_barometer=self.barometer_history[9] # Capture barometer reading from 3 hours ago
         for pointer in range (9, 0, -1): # Move previous temperatures one position in the list to prepare for new temperature to be recorded
             self.barometer_history[pointer] = self.barometer_history[pointer - 1]
-        self.barometer_history[0] = barometer
-        valid_barometer_history = True
-        for pointer in range (0, 10):
-            if self.barometer_history[pointer] == 0:
-                valid_barometer_history = False
-        if valid_barometer_history == True:
-            barometer_change = self.barometer_history[0] - self.barometer_history[9]
+        self.barometer_history[0] = barometer # Log latest reading
+        if three_hour_barometer!=0:
+            valid_barometer_history = True
+            barometer_change = barometer - three_hour_barometer
         else:
+            valid_barometer_history=False
             barometer_change = 0
         #self.print_update("Log Barometer on ")
         #print("Result", self.barometer_history,valid_barometer_history, round(barometer_change,2))
@@ -221,7 +220,7 @@ class NorthcliffDisplay(object): # The class for the main display code
             elif barometer_change>=10:
                 forecast = 'Gale Warning'
             elif barometer_change>-1.1 and barometer_change<=0:
-                forecast = 'Fair with Slight Temp Change'
+                forecast = 'Fair Weather with Slight Temp Change'
             elif barometer_change<=-1.1 and barometer_change>-4:
                 forecast = 'No Change and Rain in 24 Hours'
             else:
@@ -229,6 +228,8 @@ class NorthcliffDisplay(object): # The class for the main display code
         else: # barometer>1023
             if barometer_change>-1.1 and barometer_change<1.1:
                 forecast = 'Fair Weather'
+            elif barometer_change>-1.1 and barometer_change<=0:
+                forecast = 'Fair Weather Weather with No Marked Temp Change'
             elif barometer_change>=1.1 and barometer_change<6:
                 forecast = 'Poorer Weather'
             elif barometer_change>=6 and barometer_change<10:
