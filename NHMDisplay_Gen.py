@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# Northcliff Home Manager Display - Version 3.6 - Gen
+# Northcliff Home Manager Display - Version 3.8 Gen - Support IOS 13
+# Requires Home Manager >= Version 8.5
 import time
 import paho.mqtt.client as mqtt
 import json
@@ -14,8 +15,8 @@ class NorthcliffDisplay(object): # The class for the main display code
         self.motion_map={'Living Motion':(6,4), 'Study Motion':(2,3), 'Kitchen Motion':(3,0), 'North Motion':(1,6), 'South Motion':(1,0), 'Main Motion':(5,6),
                           'Rear Balcony Motion':(0,6), 'North Balcony Motion':(7,6), 'South Balcony Motion':(7,0)}
         self.door_map={'Entry Door':(3,7), 'South Living Room Door':(7,3), 'North Living Room Door':(7,4)}
-        self.temp_map={'Living Temp':(6,5), 'Study Temp':(2,4), 'Kitchen Temp':(3,1), 'North Temp':(1,7), 'South Temp':(1,1), 'Main Temp':(5,7),
-                          'Rear Balcony Temp':(0,7), 'North Balcony Temp':(7,7), 'South Balcony Temp':(7,1)}
+        self.temp_map={'Living Temperature':(6,5), 'Study Temperature':(2,4), 'Kitchen Temperature':(3,1), 'North Temperature':(1,7), 'South Temperature':(1,1), 'Main Temperature':(5,7),
+                          'Rear Balcony Temperature':(0,7), 'North Balcony Temperature':(7,7), 'South Balcony Temperature':(7,1)}
         self.display_buffer=[[0,0,0] for a in range(64)]
         self.aircon_state_map=(4,4)
         self.aircon_filter_map=(4,5)
@@ -25,6 +26,7 @@ class NorthcliffDisplay(object): # The class for the main display code
         self.barometer_calibration_offset=-3
         self.barometer_change_map=(0,4)
         self.barometer_history = [0.00 for x in range (10)]
+        #self.barometer_history = [1023.6, 1023.3, 1023.2, 1023.3, 1023.2, 1023.4, 1023.5, 1023.7, 1023.1, 1024.0]
         self.weather_forecast=[[0,0],[0,0],[0,0]]
         self.wind_forecast_map=(0,0)
         self.rain_forecast_map=(0,1)
@@ -48,7 +50,7 @@ class NorthcliffDisplay(object): # The class for the main display code
             #print(parsed_json)
             if parsed_json['service_name']=='Living Air Quality' and parsed_json['characteristic']=='AirQuality':
                 self.process_aqi(parsed_json)
-            elif parsed_json['name']=='Aircon':
+            elif 'Aircon' in parsed_json['name']:
                 self.process_aircon(parsed_json)
             elif parsed_json['service']=='MotionSensor' and parsed_json['characteristic']=='MotionDetected':
                 self.process_motion(parsed_json)
@@ -120,7 +122,7 @@ class NorthcliffDisplay(object): # The class for the main display code
         self.load_display_buffer(self.temp_map[parsed_json['service_name']][0], self.temp_map[parsed_json['service_name']][1], [hue,100,100])
 
     def process_hum(self, parsed_json):
-        if parsed_json['service_name']=='North Balcony Hum':
+        if parsed_json['service_name']=='North Balcony Humidity':
             #print('Humidity', parsed_json, self.hum_map[0], self.hum_map[1])
             hue=int(parsed_json['value']*2.4)
             self.load_display_buffer(self.hum_map[0], self.hum_map[1], [hue,100,100])
@@ -226,7 +228,7 @@ class NorthcliffDisplay(object): # The class for the main display code
             else:
                 forecast = 'Rain, Wind and Higher Temp'
         else: # barometer>1023
-            if barometer_change>-1.1 and barometer_change<1.1:
+            if barometer_change>0 and barometer_change<1.1:
                 forecast = 'Fair Weather'
             elif barometer_change>-1.1 and barometer_change<=0:
                 forecast = 'Fair Weather Weather with No Marked Temp Change'
@@ -321,7 +323,7 @@ if __name__ == '__main__': # This is where to overall code kicks off
     client = mqtt.Client('home_manager_display')
     client.on_connect = dsp.on_connect
     client.on_message = dsp.on_message
-    client.connect("studypi.local", 1883, 60)
+    client.connect("mqtt broker name>", 1883, 60)
     # Blocking call that processes network traffic, dispatches callbacks and handles reconnecting.
     client.loop_start()
     client.subscribe(dsp.homebridge_outgoing_mqtt_topic) # Subscribe to mqtt messages from Home Manager to Homebridge
