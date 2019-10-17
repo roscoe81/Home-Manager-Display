@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Northcliff Home Manager Display - Version 3.8 Gen - Support IOS 13
+# Northcliff Home Manager Display - Version 3.9 Gen
 # Requires Home Manager >= Version 8.5
 import time
 import paho.mqtt.client as mqtt
@@ -21,7 +21,8 @@ class NorthcliffDisplay(object): # The class for the main display code
         self.aircon_state_map=(4,4)
         self.aircon_filter_map=(4,5)
         self.hum_map=(7,5)
-        self.aqi_map=(4,3)
+        self.aqi_map=(4,2)
+        self.air_purifier_filter_map={'Living Air Purifier':(4,3), 'Main Air Purifier':(6,6)}
         self.barometer_map=(0,3)
         self.barometer_calibration_offset=-3
         self.barometer_change_map=(0,4)
@@ -48,7 +49,9 @@ class NorthcliffDisplay(object): # The class for the main display code
         parsed_json = json.loads(decoded_payload)
         if msg.topic == self.homebridge_outgoing_mqtt_topic: # If it's a Homebridge message coming from Home Manager
             #print(parsed_json)
-            if parsed_json['service_name']=='Living Air Quality' and parsed_json['characteristic']=='AirQuality':
+            if 'Air Purifier' in parsed_json['name'] and parsed_json['characteristic']=='FilterChangeIndication':
+                self.process_air_purifier_filter(parsed_json)
+            elif 'Air Quality' in parsed_json['name'] and parsed_json['characteristic']=='AirQuality':
                 self.process_aqi(parsed_json)
             elif 'Aircon' in parsed_json['name']:
                 self.process_aircon(parsed_json)
@@ -66,6 +69,12 @@ class NorthcliffDisplay(object): # The class for the main display code
                 #print("Ignored json", parsed_json)
                 pass
 
+    def process_air_purifier_filter(self, parsed_json):
+        if parsed_json['value']==1: # Filter needs changing
+            self.load_display_buffer(self.air_purifier_filter_map[parsed_json['name']][0], self.air_purifier_filter_map[parsed_json['name']][1], [0,100,100]) # Red
+        else: # Filter is OK
+            self.load_display_buffer(self.air_purifier_filter_map[parsed_json['name']][0], self.air_purifier_filter_map[parsed_json['name']][1], [0,0,0]) # Off                                                   
+                
     def process_aircon(self, parsed_json):
         #print("Process Aircon", parsed_json)
         if parsed_json['service_name'] == 'Remote Operation' and parsed_json['value'] == False:
