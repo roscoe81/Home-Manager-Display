@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Northcliff Home Manager Display - Version 3.9 Gen
+# Northcliff Home Manager Display - Version 3.10 Gen
 # Requires Home Manager >= Version 8.5
 import time
 import paho.mqtt.client as mqtt
@@ -122,12 +122,12 @@ class NorthcliffDisplay(object): # The class for the main display code
             else:
                 hue=int((30-parsed_json['value'])*12)
         else:
-            if parsed_json['value']>24:
+            if parsed_json['value']>26:
                 hue=0
             elif parsed_json['value']<18:
                 hue=240
             else:
-                hue=int((24-parsed_json['value'])*40)
+                hue=int((26-parsed_json['value'])*30)
         self.load_display_buffer(self.temp_map[parsed_json['service_name']][0], self.temp_map[parsed_json['service_name']][1], [hue,100,100])
 
     def process_hum(self, parsed_json):
