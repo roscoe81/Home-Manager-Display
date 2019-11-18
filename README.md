@@ -9,15 +9,21 @@ The SenseHat mimics the managed property's layout to display the following senso
 ### Outdoor Humidity Sensors
   The relevant pixel changes from red to green to blue as the humidity increases.
 ### Indoor Air Quality Levels
-  The relevant pixel changes from green to red as the air quality deteriorates.
+  The relevant pixel changes from green to red as the air quality deteriorates. There is also a pixel that is red when the BlueAir filter needs changing.
 ### Airconditioner Heating/Cooling/Fan States and Filter Status
   The relevant aircon state pixel is orange for heat, cyan for cool and white for fan mode. A second pixel is set to red if the aircon filter requires cleaning.
 ### Door Sensors
 The relevant pixel is green for door closed and yellow for door opened.
+### Aquarium ph Sensor
+The relevant pixel is red for a ph <= 6.5, green for a ph of 7 and blue for a ph >= 7.5, with proportional hues between those levels.
+### Aquarium nh3 Sensor
+The relevant pixel is green for an nh3 level of 0ppm, yellow for 0.1ppm and red for >= 0.2ppm, with proportional hues between those levels.
+### Aquarium Temperature Sensor
+The relevant pixel is red for a temperature >= 28 degrees Celsius, green for a temperature of 25 degrees Celsius and blue for a temperature <= 22 degrees Celsius, with proportional hues between those levels.
 
 One of Home Manager's light level sensors is monitored to dim the SenseHat's display during low light conditions.
 
-The Home Manager sensor states are determined by monitoring the mqtt messages between the Home Manager and Homebridge
+The Home Manager sensor states are determined by monitoring the mqtt messages between the Home Manager and Homebridge or the Home Manager and Domoticz.
 
 This project also uses SenseHat's air pressure monitor to record air pressure pressure changes over a 3 hour period to make some weather predictions. It uses five pixels as follows:
 ### Wind Prediction
