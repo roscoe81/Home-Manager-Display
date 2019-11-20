@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Northcliff Home Manager Display - Version 3.13-Gen
+# Northcliff Home Manager Display - Version 3.15 Gen
 # Requires Home Manager >= Version 8.14
 import time
 import paho.mqtt.client as mqtt
@@ -51,7 +51,8 @@ class NorthcliffDisplay(object): # The class for the main display code
     def on_connect(self, client, userdata, flags, rc):
         # Sets up the mqtt subscriptions. Subscribing in on_connect() means that if we lose the connection and reconnect then subscriptions will be renewed.
         self.print_update('Northcliff Home Manager Display Connected with result code '+str(rc)+' on ')
-        print('')
+        client.subscribe(self.homebridge_outgoing_mqtt_topic) # Subscribe to mqtt messages from Home Manager to Homebridge
+        client.subscribe(self.domoticz_incoming_mqtt_topic) # Subscribe to mqtt messages from Home Manager to Domoticz
     
     def on_message(self, client, userdata, msg):
         # Calls the relevant methods for the display, based on the mqtt publish messages received from the Home Manager
@@ -406,8 +407,6 @@ if __name__ == '__main__': # This is where to overall code kicks off
     client.connect("mqtt broker name>", 1883, 60)
     # Blocking call that processes network traffic, dispatches callbacks and handles reconnecting.
     client.loop_start()
-    client.subscribe(dsp.homebridge_outgoing_mqtt_topic) # Subscribe to mqtt messages from Home Manager to Homebridge
-    client.subscribe(dsp.domoticz_incoming_mqtt_topic) # Subscribe to mqtt messages from Home Manager to Domoticz
     dsp.run()
 
 
