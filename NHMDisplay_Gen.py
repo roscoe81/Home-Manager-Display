@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# Northcliff Home Manager Display - Version 3.15 Gen
-# Requires Home Manager >= Version 8.14
+# Northcliff Home Manager Display - Version 3.21 Gen
+# Requires Home Manager >= Version 9.38
 import time
 import paho.mqtt.client as mqtt
 import json
@@ -23,11 +23,12 @@ class NorthcliffDisplay(object): # The class for the main display code
         self.aircon_filter_map=(4,5)
         self.hum_map=(7,5)
         self.aqi_map=(4,2)
+        self.outdoor_aqi_map= (0,5)
         self.air_purifier_filter_map={'Living Air Purifier':(4,3), 'Main Air Purifier':(6,6)}
         self.barometer_map=(0,3)
         self.barometer_calibration_offset=-3
         self.barometer_change_map=(0,4)
-        self.barometer_history = [0.00 for x in range (10)]
+        self.barometer_history = [0.00 for x in range (9)]
         self.weather_forecast=[[0,0],[0,0],[0,0]]
         self.wind_forecast_map=(0,0)
         self.rain_forecast_map=(0,1)
@@ -37,7 +38,7 @@ class NorthcliffDisplay(object): # The class for the main display code
                                       'Poorer Weather': [[[60,100],[180,100],[180,100]],'3'],
                                       'Fair Weather with Slight Temp Change': [[[120,100],[120,100],[150,100]],'1'], 'No Change and Rain in 24 Hours': [[[120,0],[180,100],[120,0]],'3'],
                                       'Rain, Wind and Higher Temp': [[[80,100],[180,100],[60,100]],'3'],
-                                      'Fair Weather':[[[120,100],[120,100],[120,100]],'1'], 'Fair Weather Weather with No Marked Temp Change': [[[120,100],[120,100],[120,0]],'0'],
+                                      'Fair Weather':[[[120,100],[120,100],[120,100]],'1'], 'Fair Weather with No Marked Temp Change': [[[120,100],[120,100],[120,0]],'0'],
                                       'Fair Weather and Slowly Rising Temp': [[[120,100],[120,100],[60,100]],'1'], 'Warming Trend': [[[120,0],[120,0],[30,100]],'1']}
         self.domoticz_barometer_format={'idx':767,'nvalue':0}
         self.domoticz_barometer_level='0'
@@ -62,17 +63,19 @@ class NorthcliffDisplay(object): # The class for the main display code
             #print(parsed_json)
             if 'Air Purifier' in parsed_json['name'] and parsed_json['characteristic']=='FilterChangeIndication':
                 self.process_air_purifier_filter(parsed_json)
-            elif 'Air Quality' in parsed_json['name'] and parsed_json['characteristic']=='AirQuality':
+            elif parsed_json['name']=='Indoor AQI' and parsed_json['characteristic']=='AirQuality':
                 self.process_aqi(parsed_json)
+            elif parsed_json['name']=='Outdoor AQI' and parsed_json['characteristic']=='AirQuality':
+                self.process_outdoor_aqi(parsed_json)
             elif 'Aircon' in parsed_json['name']:
                 self.process_aircon(parsed_json)
-            elif parsed_json['service']=='MotionSensor' and parsed_json['characteristic']=='MotionDetected':
+            elif ' Motion' in parsed_json['service_name'] and parsed_json['characteristic']=='MotionDetected':
                 self.process_motion(parsed_json)
-            elif parsed_json['service']=='ContactSensor' and parsed_json['characteristic']=='ContactSensorState':
+            elif ' Door' in parsed_json['service_name'] and parsed_json['characteristic']=='ContactSensorState':
                 self.process_door(parsed_json)
-            elif parsed_json['service']=='TemperatureSensor' and parsed_json['characteristic']=='CurrentTemperature':
+            elif ' Temperature' in parsed_json['service_name'] and parsed_json['characteristic']=='CurrentTemperature':
                 self.process_temp(parsed_json)
-            elif parsed_json['service']=='HumiditySensor' and parsed_json['characteristic']=='CurrentRelativeHumidity':
+            elif ' Humidity' in parsed_json['service_name'] and parsed_json['characteristic']=='CurrentRelativeHumidity':
                 self.process_hum(parsed_json)
             elif parsed_json['service_name']=='Living Lux' and parsed_json['characteristic']=='CurrentAmbientLightLevel':
                 self.process_lux(parsed_json)
@@ -98,22 +101,22 @@ class NorthcliffDisplay(object): # The class for the main display code
 
     def process_aircon(self, parsed_json):
         #print("Process Aircon", parsed_json)
-        if parsed_json['service_name'] == 'Remote Operation' and parsed_json['value'] == False:
+        if parsed_json['service_name'] == 'Remote Operation' and parsed_json['value'] == 0:
             #print('Aircon Off', self.aircon_state_map[0], self.aircon_state_map[1])
             self.load_display_buffer(self.aircon_state_map[0], self.aircon_state_map[1], [0,0,0]) # Off
-        elif parsed_json['service_name'] == 'Fan' and parsed_json['value'] == True:
+        elif parsed_json['service_name'] == 'Fan' and parsed_json['value'] == 1:
             #print('Aircon Fan', self.aircon_state_map[0], self.aircon_state_map[1])
             self.load_display_buffer(self.aircon_state_map[0], self.aircon_state_map[1], [0,0,100] ) # White
-        elif parsed_json['service_name'] == 'Heat'and parsed_json['value'] == True:
+        elif parsed_json['service_name'] == 'Heat'and parsed_json['value'] == 1:
             #print('Aircon Heat', self.aircon_state_map[0], self.aircon_state_map[1])
             self.load_display_buffer(self.aircon_state_map[0], self.aircon_state_map[1], [30,100,100]) # Orange
-        elif parsed_json['service_name'] == 'Cool' and parsed_json['value'] == True:
+        elif parsed_json['service_name'] == 'Cool' and parsed_json['value'] == 1:
             #print('Aircon Cool', self.aircon_state_map[0], self.aircon_state_map[1])
             self.load_display_buffer(self.aircon_state_map[0], self.aircon_state_map[1], [180,100,100]) # Cyan
-        elif parsed_json['service_name']=='Filter' and parsed_json['value']==True:
+        elif parsed_json['service_name']=='Filter' and parsed_json['value']==1:
             #print('Aircon Filter Alarm', parsed_json, self.aircon_filter_map[0], self.aircon_filter_map[1])
             self.load_display_buffer(self.aircon_filter_map[0], self.aircon_filter_map[1], [0,100,100]) # Red
-        elif parsed_json['service_name']=='Filter' and parsed_json['value']==False:
+        elif parsed_json['service_name']=='Filter' and parsed_json['value']==0:
             #print('Aircon Filter OK', parsed_json, self.aircon_filter_map[0], self.aircon_filter_map[1])
             self.load_display_buffer(self.aircon_filter_map[0], self.aircon_filter_map[1], [0,0,0]) # Off
         else:
@@ -162,6 +165,14 @@ class NorthcliffDisplay(object): # The class for the main display code
         hue=int((5-parsed_json['value'])*30)
         self.load_display_buffer(self.aqi_map[0], self.aqi_map[1], [hue,100,100])
 
+    def process_outdoor_aqi(self, parsed_json):
+        #print('Process Outdoor AQI', parsed_json, self.outdoor_aqi_map[0], self.outdoor_aqi_map[1])
+        if parsed_json['value'] != 0:
+            hue=int((5-parsed_json['value'])*30)
+            self.load_display_buffer(self.outdoor_aqi_map[0], self.outdoor_aqi_map[1], [hue,100,100])
+        else:
+            self.load_display_buffer(self.outdoor_aqi_map[0], self.outdoor_aqi_map[1], (0,0,100)) # White if AQI = 0
+
     def process_lux(self, parsed_json):
         #print('Living Light Level', parsed_json)
         if parsed_json['value']<40:
@@ -169,12 +180,11 @@ class NorthcliffDisplay(object): # The class for the main display code
         else:
             self.low_light=False
 
-    def process_barometer(self):
-        barometer_log_time = time.time()
+    def process_barometer(self, log):
         barometer=round(sense.get_pressure(),2)+self.barometer_calibration_offset
         if barometer>500: # Only record valid barometer readings. Caters for startup mode
             valid_barometer_reading=True
-            valid_barometer_history, barometer_change = self.log_barometer(barometer)
+            barometer_reading_time=time.time()
             self.print_update('Barometer Reading of '+str(barometer)+' millibars on ')
             if barometer>1023:
                 hue=0
@@ -183,21 +193,33 @@ class NorthcliffDisplay(object): # The class for the main display code
             else:
                 hue=int((1023-barometer)*12)
             self.load_display_buffer(self.barometer_map[0], self.barometer_map[1], [hue,100,100])
-            self.domoticz_barometer=str(round(barometer,1))
-            if valid_barometer_history == True:
-                self.process_barometer_change(barometer_change, barometer)
+            self.domoticz_barometer="{:.2f}".format(barometer)
+            if log == True:
+                barometer_log_time = barometer_reading_time
+                valid_barometer_history, barometer_change = self.log_barometer(barometer)
+                if valid_barometer_history == True:
+                    self.process_barometer_change(barometer_change, barometer)
+                else:
+                    domoticz_json = self.domoticz_barometer_format
+                    domoticz_json['svalue'] = self.domoticz_barometer + ';' + self.domoticz_barometer_forecast
+                    client.publish(self.domoticz_incoming_mqtt_topic, json.dumps(domoticz_json))
+                return valid_barometer_reading, barometer_log_time, barometer_reading_time
             else:
-                domoticz_json = self.domoticz_barometer_format
-                domoticz_json['svalue'] = self.domoticz_barometer+';0'
-                client.publish(self.domoticz_incoming_mqtt_topic, json.dumps(domoticz_json))
+               domoticz_json = self.domoticz_barometer_format
+               domoticz_json['svalue'] = self.domoticz_barometer + ';' + self.domoticz_barometer_forecast
+               client.publish(self.domoticz_incoming_mqtt_topic, json.dumps(domoticz_json))
+               return valid_barometer_reading, barometer_reading_time
         else:
             valid_barometer_reading=False
-        return valid_barometer_reading, barometer_log_time
+            barometer_log_time = 0
+            barometer_reading_time = 0
+        return valid_barometer_reading, barometer_log_time, barometer_reading_time
+
 
     def process_aquarium(self,parsed_json):
-        print('Aquarium Message', parsed_json)
+        #print('Aquarium Message', parsed_json)
         if parsed_json['idx']==self.aquarium_idx_map['ph']:
-            print('ph:', parsed_json['svalue'], self.aquarium_ph_map[0], self.aquarium_ph_map[1])
+            #print('ph:', parsed_json['svalue'], self.aquarium_ph_map[0], self.aquarium_ph_map[1])
             ph=float(parsed_json['svalue'])
             if ph<6.5:
                 hue=0
@@ -207,7 +229,7 @@ class NorthcliffDisplay(object): # The class for the main display code
                 hue=int((ph-6.5)*240)
             self.load_display_buffer(self.aquarium_ph_map[0], self.aquarium_ph_map[1], [hue,100,100])
         elif parsed_json['idx']==self.aquarium_idx_map['nh3']:
-            print('nh3:', parsed_json['svalue'], self.aquarium_nh3_map[0], self.aquarium_nh3_map[1])
+            #print('nh3:', parsed_json['svalue'], self.aquarium_nh3_map[0], self.aquarium_nh3_map[1])
             nh3=float(parsed_json['svalue'])
             if nh3<0:
                 hue=120
@@ -217,7 +239,7 @@ class NorthcliffDisplay(object): # The class for the main display code
                 hue=int(120-nh3*600)
             self.load_display_buffer(self.aquarium_nh3_map[0], self.aquarium_nh3_map[1], [hue,100,100])
         elif parsed_json['idx']==self.aquarium_idx_map['temp']:
-            print('temp:', parsed_json['svalue'], self.aquarium_temp_map[0], self.aquarium_temp_map[1])
+            #print('temp:', parsed_json['svalue'], self.aquarium_temp_map[0], self.aquarium_temp_map[1])
             temp=float(parsed_json['svalue'])
             if temp<22:
                 hue=240
@@ -230,8 +252,8 @@ class NorthcliffDisplay(object): # The class for the main display code
             pass
             
     def log_barometer(self, barometer): # Logs 3 hours of barometer readings, taken every 18 minutes
-        three_hour_barometer=self.barometer_history[9] # Capture barometer reading from 3 hours ago
-        for pointer in range (9, 0, -1): # Move previous temperatures one position in the list to prepare for new temperature to be recorded
+        three_hour_barometer=self.barometer_history[8] # Capture barometer reading from 3 hours ago
+        for pointer in range (8, 0, -1): # Move previous temperatures one position in the list to prepare for new temperature to be recorded
             self.barometer_history[pointer] = self.barometer_history[pointer - 1]
         self.barometer_history[0] = barometer # Log latest reading
         if three_hour_barometer!=0:
@@ -240,8 +262,8 @@ class NorthcliffDisplay(object): # The class for the main display code
         else:
             valid_barometer_history=False
             barometer_change = 0
-        #self.print_update("Log Barometer on ")
-        #print("Result", self.barometer_history,valid_barometer_history, round(barometer_change,2))
+        self.print_update("Log Barometer on ")
+        print("Result", self.barometer_history,valid_barometer_history, round(barometer_change,2))
         return valid_barometer_history, barometer_change
 
     def process_barometer_change(self, barometer_change, barometer):
@@ -259,7 +281,7 @@ class NorthcliffDisplay(object): # The class for the main display code
         self.domoticz_barometer_forecast=domoticz_forecast
         domoticz_json = self.domoticz_barometer_format
         domoticz_json['svalue'] = self.domoticz_barometer +';'+self.domoticz_barometer_forecast
-        client.publish('domoticz/in', json.dumps(domoticz_json))
+        client.publish(self.domoticz_incoming_mqtt_topic, json.dumps(domoticz_json))
         self.print_update('3 hour barometer change is '+str(round(barometer_change,1))+' millibars with a current reading of '+str(round(barometer,1))+' millibars. The weather forecast is "'+forecast+'" on ') 
 
     def analyse_barometer(self, barometer_change, barometer, forecast_barometer_map):
@@ -309,7 +331,7 @@ class NorthcliffDisplay(object): # The class for the main display code
             if barometer_change>0 and barometer_change<1.1:
                 forecast = 'Fair Weather'
             elif barometer_change>-1.1 and barometer_change<=0:
-                forecast = 'Fair Weather Weather with No Marked Temp Change'
+                forecast = 'Fair Weather with No Marked Temp Change'
             elif barometer_change>=1.1 and barometer_change<6:
                 forecast = 'Poorer Weather'
             elif barometer_change>=6 and barometer_change<10:
@@ -383,12 +405,16 @@ class NorthcliffDisplay(object): # The class for the main display code
         try:
             valid_barometer_reading=False
             while valid_barometer_reading==False: # Wait for valid barometer reading
-                valid_barometer_reading, barometer_log_time = self.process_barometer()
+                valid_barometer_reading, barometer_log_time, barometer_reading_time = self.process_barometer(log=True)
             while True: # Run display in continuous loop
                 time.sleep(0.5)
                 self.drive_display()
-                if (time.time() - barometer_log_time) >= 1080: # Update the barometer log if last update was >= 18 minutes ago
-                    valid_barometer_reading, barometer_log_time = self.process_barometer()     
+                if (time.time() - barometer_log_time) >= 1200: # Read and update the barometer log if last update was >= 20 minutes ago
+                    valid_barometer_reading, barometer_log_time, barometer_reading_time = self.process_barometer(log=True)
+                elif (time.time() - barometer_reading_time) >= 300: # Read without logging if the last reading was >= 5 minutes ago
+                    valid_barometer_reading, barometer_reading_time = self.process_barometer(log=False)
+                else:
+                    pass
         except KeyboardInterrupt: # Shutdown on ctrl C
             # Shutdown main program
             print('Barometer Log:', self.barometer_history)
@@ -404,7 +430,7 @@ if __name__ == '__main__': # This is where to overall code kicks off
     client = mqtt.Client('home_manager_display')
     client.on_connect = dsp.on_connect
     client.on_message = dsp.on_message
-    client.connect("mqtt broker name>", 1883, 60)
+    client.connect("<Your mqtt broker name>", 1883, 60)
     # Blocking call that processes network traffic, dispatches callbacks and handles reconnecting.
     client.loop_start()
     dsp.run()
